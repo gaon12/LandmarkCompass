@@ -9,6 +9,15 @@
 const CalculationUtils = {
     
     /**
+     * Convert degrees to radians.
+     * @param {number} degrees - Angle in degrees
+     * @returns {number} Angle in radians
+     */
+    toRadians(degrees) {
+        return degrees * Math.PI / 180;
+    },
+
+    /**
      * Calculates the bearing (direction) from one coordinate to another using spherical trigonometry
      * @param {number} lat1 - Latitude of the starting point
      * @param {number} lng1 - Longitude of the starting point
@@ -17,9 +26,9 @@ const CalculationUtils = {
      * @returns {number} Bearing in degrees (0-360)
      */
     calculateBearing(lat1, lng1, lat2, lng2) {
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const lat1Rad = lat1 * Math.PI / 180;
-        const lat2Rad = lat2 * Math.PI / 180;
+        const dLng = this.toRadians(lng2 - lng1);
+        const lat1Rad = this.toRadians(lat1);
+        const lat2Rad = this.toRadians(lat2);
         
         const y = Math.sin(dLng) * Math.cos(lat2Rad);
         const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
@@ -40,14 +49,18 @@ const CalculationUtils = {
      */
     calculateDistance(lat1, lng1, lat2, lng2) {
         const R = 6371; // Earth's radius in kilometers
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const lat1Rad = this.toRadians(lat1);
+        const lat2Rad = this.toRadians(lat2);
+        const dLat = this.toRadians(lat2 - lat1);
+        const dLng = this.toRadians(lng2 - lng1);
+        const sinDLat = Math.sin(dLat / 2);
+        const sinDLng = Math.sin(dLng / 2);
         
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const a = sinDLat * sinDLat +
+                  Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                  sinDLng * sinDLng;
         
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     },
     
@@ -97,32 +110,43 @@ const CalculationUtils = {
             }
         }
     },
+
+    /**
+     * Calculates and caches the bearing and distance for every configured landmark.
+     * These values only depend on the user's location, so they do not need to be
+     * recalculated on every compass heading update.
+     */
+    updateLandmarkCalculations() {
+        if (!AppState.location.current) return;
+
+        Object.entries(landmarks).forEach(([landmarkId, landmark]) => {
+            const bearing = this.calculateBearing(
+                AppState.location.current.lat,
+                AppState.location.current.lng,
+                landmark.latitude,
+                landmark.longitude
+            );
+
+            const distance = this.calculateDistance(
+                AppState.location.current.lat,
+                AppState.location.current.lng,
+                landmark.latitude,
+                landmark.longitude
+            );
+
+            AppState.landmarks.calculated.set(landmarkId, { bearing, distance });
+        });
+    },
     
     /**
      * Calculates directions and distances to all landmarks from the current position
-     * Enhanced version that includes distance calculations
+     * Enhanced version that includes cached distance calculations
      */
     calculateAllDirections() {
         if (!AppState.location.current) return;
-        
-        Object.keys(landmarks).forEach(landmarkId => {
-            const landmark = landmarks[landmarkId];
-            
-            // Calculate bearing
-            const bearing = this.calculateBearing(
-                AppState.location.current.lat, AppState.location.current.lng,
-                landmark.latitude, landmark.longitude
-            );
-            
-            // Calculate distance
-            const distance = this.calculateDistance(
-                AppState.location.current.lat, AppState.location.current.lng,
-                landmark.latitude, landmark.longitude
-            );
-            
-            // Update both bearing and distance
-            LandmarkRenderer.updateLandmarkInfo(landmarkId, bearing, distance);
-        });
+
+        this.updateLandmarkCalculations();
+        LandmarkRenderer.updateAllLandmarksFromCache();
     }
 };
 
