@@ -30,7 +30,7 @@ const LandmarkRenderer = {
      * @param {number} bearing - The bearing angle in degrees (not used since rotation is handled by parent line)
      */
     updateLandmarkDistance(landmarkId, distanceKm, bearing) {
-        const distanceElement = document.getElementById(`distance-${landmarkId}`);
+        const distanceElement = DOMCache.getDistanceElement(landmarkId);
         if (distanceElement) {
             distanceElement.textContent = CalculationUtils.formatDistance(distanceKm);
         }
@@ -56,21 +56,16 @@ const LandmarkRenderer = {
             const x = Math.cos(angleRad) * radius;
             const y = Math.sin(angleRad) * radius;
             
-            // Get image dimensions
-            const imgElement = compassLandmarkElement.querySelector('img');
-            let imageWidth = null;
-            let imageHeight = null;
-            
-            if (imgElement && imgElement.offsetWidth > 0) {
-                imageWidth = imgElement.offsetWidth;
-                imageHeight = imgElement.offsetHeight;
-            }
+            // Get visible child dimensions from the image or text fallback
+            const visualElement = compassLandmarkElement.querySelector('img:not(.hidden), .landmark-fallback:not(.hidden)');
+            const visualWidth = visualElement && visualElement.offsetWidth > 0 ? visualElement.offsetWidth : 40;
+            const visualHeight = visualElement && visualElement.offsetHeight > 0 ? visualElement.offsetHeight : 28;
             
             // Position relative to compass center
             compassLandmarkElement.style.left = '50%';
             compassLandmarkElement.style.top = '50%';
-            compassLandmarkElement.style.marginLeft = - (imageWidth / 2) + 'px';
-            compassLandmarkElement.style.marginTop = - imageHeight + 20 + 'px';
+            compassLandmarkElement.style.marginLeft = - (visualWidth / 2) + 'px';
+            compassLandmarkElement.style.marginTop = - visualHeight + 20 + 'px';
             
             // Apply final transform
             compassLandmarkElement.style.transform = `translate(${x}px, ${y}px)`;
@@ -79,29 +74,36 @@ const LandmarkRenderer = {
             this.updateCompassLine(landmarkId, relativeBearing);
         }
     },
+
+    /**
+     * Updates one landmark using the cached calculation values.
+     * @param {string} landmarkId - The landmark identifier
+     */
+    updateLandmarkFromCache(landmarkId) {
+        const calculated = AppState.landmarks.calculated.get(landmarkId);
+        if (!calculated) return;
+
+        this.updateCompassLandmark(landmarkId, calculated.bearing);
+        this.updateLandmarkDistance(landmarkId, calculated.distance, calculated.bearing);
+    },
+
+    /**
+     * Updates all landmark positions and distance displays from cached calculations.
+     */
+    updateAllLandmarksFromCache() {
+        AppState.landmarks.calculated.forEach((calculated, landmarkId) => {
+            this.updateCompassLandmark(landmarkId, calculated.bearing);
+            this.updateLandmarkDistance(landmarkId, calculated.distance, calculated.bearing);
+        });
+    },
     
     /**
      * Updates all landmark positions on the compass when device orientation changes
-     * Recalculates and repositions all landmark icons and distance displays based on current heading
+     * Reuses cached bearing and distance values because only the device heading changes.
      */
     updateAllLines() {
         if (!AppState.location.current) return;
-        
-        Object.keys(landmarks).forEach(landmarkId => {
-            const landmark = landmarks[landmarkId];
-            const bearing = CalculationUtils.calculateBearing(
-                AppState.location.current.lat, AppState.location.current.lng,
-                landmark.latitude, landmark.longitude
-            );
-            const distance = CalculationUtils.calculateDistance(
-                AppState.location.current.lat, AppState.location.current.lng,
-                landmark.latitude, landmark.longitude
-            );
-            
-            // Update both landmark position and distance display
-            this.updateCompassLandmark(landmarkId, bearing);
-            this.updateLandmarkDistance(landmarkId, distance, bearing);
-        });
+        this.updateAllLandmarksFromCache();
     },
     
     /**

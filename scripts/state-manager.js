@@ -28,6 +28,11 @@ const AppState = {
     sensors: {
         orientationSupported: false,
         permissionGranted: false
+    },
+    landmarks: {
+        // Stores calculated bearing and distance values by landmark ID.
+        // These values are recalculated only when the user's location changes.
+        calculated: new Map()
     }
 };
 

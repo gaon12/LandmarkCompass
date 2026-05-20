@@ -17,7 +17,7 @@ const AppController = {
         if (!compassCircle || AppState.ui.landmarkElementsCreated) return;
         
         // Create elements for each landmark
-        Object.keys(landmarks).forEach(landmarkId => {
+        Object.entries(landmarks).forEach(([landmarkId, landmark]) => {
             // Create compass line
             const lineElement = document.createElement('div');
             lineElement.className = 'compass-line';
@@ -36,12 +36,28 @@ const AppController = {
             const landmarkElement = document.createElement('div');
             landmarkElement.className = 'compass-landmark';
             landmarkElement.id = `compass-${landmarkId}`;
+            landmarkElement.setAttribute('aria-label', landmark.displayName || landmarkId);
             
             // Create image element
             const imgElement = document.createElement('img');
             imgElement.src = `images/${landmarkId}.png`;
-            imgElement.alt = landmarkId;
+            imgElement.alt = landmark.displayName || landmarkId;
+            imgElement.loading = 'lazy';
+            imgElement.decoding = 'async';
+
+            // Create a text fallback so newly added landmarks remain visible
+            // even before matching image files are added to the images folder.
+            const fallbackElement = document.createElement('span');
+            fallbackElement.className = 'landmark-fallback hidden';
+            fallbackElement.textContent = landmark.shortName || landmark.displayName || landmarkId;
+
+            imgElement.addEventListener('error', function() {
+                imgElement.classList.add('hidden');
+                fallbackElement.classList.remove('hidden');
+            }, { once: true });
+
             landmarkElement.appendChild(imgElement);
+            landmarkElement.appendChild(fallbackElement);
             
             compassCircle.appendChild(landmarkElement);
         });
@@ -99,6 +115,7 @@ const AppController = {
         console.log('UI:', AppState.ui);
         console.log('Sensors:', AppState.sensors);
         console.log('Landmarks:', landmarks);
+        console.log('Calculated Landmarks:', AppState.landmarks.calculated);
         console.log('=====================================');
     },
     
@@ -133,6 +150,9 @@ const AppController = {
         AppState.sensors = {
             orientationSupported: false,
             permissionGranted: false
+        };
+        AppState.landmarks = {
+            calculated: new Map()
         };
         
         console.log('Application state has been reset');

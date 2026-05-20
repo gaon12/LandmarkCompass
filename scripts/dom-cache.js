@@ -44,6 +44,7 @@ const DOMCache = {
     // Dynamic landmark elements cache
     landmarks: new Map(),
     lines: new Map(),
+    distances: new Map(),
     
     // Cache initialization state
     initialized: false,
@@ -89,10 +90,17 @@ const DOMCache = {
     cacheLandmarkElements(landmarkId) {
         if (!this.landmarks.has(landmarkId)) {
             const landmarkElement = document.getElementById(`compass-${landmarkId}`);
-            const lineElement = document.getElementById(`line-${landmarkId}`);
-            
             if (landmarkElement) this.landmarks.set(landmarkId, landmarkElement);
+        }
+
+        if (!this.lines.has(landmarkId)) {
+            const lineElement = document.getElementById(`line-${landmarkId}`);
             if (lineElement) this.lines.set(landmarkId, lineElement);
+        }
+
+        if (!this.distances.has(landmarkId)) {
+            const distanceElement = document.getElementById(`distance-${landmarkId}`);
+            if (distanceElement) this.distances.set(landmarkId, distanceElement);
         }
     },
     
@@ -119,6 +127,18 @@ const DOMCache = {
         }
         return this.lines.get(landmarkId) || null;
     },
+
+    /**
+     * Get cached distance element
+     * @param {string} landmarkId - The landmark identifier
+     * @returns {HTMLElement|null} The cached distance element or null
+     */
+    getDistanceElement(landmarkId) {
+        if (!this.distances.has(landmarkId)) {
+            this.cacheLandmarkElements(landmarkId);
+        }
+        return this.distances.get(landmarkId) || null;
+    },
     
     /**
      * Clear all cached references (useful for cleanup)
@@ -126,6 +146,7 @@ const DOMCache = {
     clear() {
         this.landmarks.clear();
         this.lines.clear();
+        this.distances.clear();
         this.initialized = false;
     }
 };

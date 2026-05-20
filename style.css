@@ -200,13 +200,33 @@ header p#note {
     display: flex;
 }
 
-.compass-landmark.visible img {
+.compass-landmark.visible img,
+.compass-landmark.visible .landmark-fallback {
     transform-origin: center bottom;
     animation: landmarkHeightAnimation 0.5s ease-out forwards;
 }
 
 .compass-landmark img {
     object-fit: cover;
+}
+
+.landmark-fallback {
+    max-width: 56px;
+    padding: 4px 6px;
+    border: 2px solid #667eea;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #667eea;
+    font-size: 0.62rem;
+    font-weight: bold;
+    line-height: 1.1;
+    text-align: center;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.hidden {
+    display: none !important;
 }
 
 /* ========================================
